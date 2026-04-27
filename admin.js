@@ -4,6 +4,12 @@
  */
 
 (function () {
+  /* ── Helper: استخراج الـ ID بأمان من أي كائن ── */
+  function getItemId(item) {
+    // يجرب كل الأسماء المحتملة للـ ID القادمة من الـ Backend
+    return item?.id ?? item?.Id ?? item?._id ?? item?.newsId ?? item?.NewsId ?? null;
+  }
+
   /* ── Helper Functions: معالجة وضغط الصور ── */
   async function compressAndEncodeImage(file, maxWidth = 800, quality = 0.7) {
     return new Promise((resolve, reject) => {
@@ -135,7 +141,7 @@
 
       resetForm();
       // تحديث القائمة المعروضة في لوحة الإدارة
-      if (typeof renderNewsFeed === 'function') renderNewsFeed();
+      renderNewsFeed();
       
     } catch (error) {
       console.error("Submission Error:", error);
@@ -154,6 +160,7 @@
     if (imagePreview) { imagePreview.style.display = 'none'; imagePreview.innerHTML = ''; }
     if (contentImagePreview) { contentImagePreview.style.display = 'none'; contentImagePreview.innerHTML = ''; }
     if (formTitleEl) formTitleEl.textContent = 'إضافة خبر جديد';
+    if (submitBtn) submitBtn.textContent = 'نشر الخبر';
   }
 
   // دالة لجلب الأخبار وعرضها في لوحة الإدارة (Admin Feed)
@@ -163,30 +170,50 @@
 
     try {
       const allNews = await window.MojazAPI.getAll();
+
+      // 🔍 للتشخيص فقط — احذف هذا السطر بعد التأكد من الاسم الصح
+      if (allNews && allNews.length > 0) {
+        console.log("🔑 مفاتيح الخبر من الـ Backend:", Object.keys(allNews[0]));
+      }
+
       if (!allNews || allNews.length === 0) {
         feedContainer.innerHTML = '<p style="text-align:center; padding:20px;">لا توجد أخبار منشورة بعد.</p>';
         return;
       }
 
-      feedContainer.innerHTML = allNews.map(item => `
-        <div class="admin-news-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
-          <div>
-            <strong style="display:block;">${item.title}</strong>
-            <small style="color:#666;">${item.category} | ${new Date(item.createdAt).toLocaleDateString('ar-EG')}</small>
+      feedContainer.innerHTML = allNews.map(item => {
+        // ✅ استخدام getItemId بدل item.id || item._id مباشرة
+        const newsId = getItemId(item);
+
+        if (!newsId) {
+          console.warn("⚠️ خبر بدون ID:", item);
+        }
+
+        return `
+          <div class="admin-news-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
+            <div>
+              <strong style="display:block;">${item.title}</strong>
+              <small style="color:#666;">${item.category} | ${new Date(item.createdAt).toLocaleDateString('ar-EG')}</small>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button onclick="editNews('${newsId}')" class="btn-edit" style="background:#4361ee; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">تعديل</button>
+              <button onclick="deleteNews('${newsId}')" class="btn-delete" style="background:#e63946; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">حذف</button>
+            </div>
           </div>
-          <div style="display:flex; gap:10px;">
-             <button onclick="editNews('${item.id || item._id}')" class="btn-edit" style="background:#4361ee; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">تعديل</button>
-             <button onclick="deleteNews('${item.id || item._id}')" class="btn-delete" style="background:#e63946; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">حذف</button>
-          </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     } catch (err) {
+      console.error("renderNewsFeed error:", err);
       feedContainer.innerHTML = '<p style="color:red;">خطأ في تحميل الأخبار.</p>';
     }
   }
 
   // جعل دالة الحذف والتعديل متاحة عالمياً للأزرار
   window.deleteNews = async (id) => {
+    if (!id || id === 'null' || id === 'undefined') {
+      showToast('❌ معرّف الخبر غير صالح');
+      return;
+    }
     if (!confirm('هل أنت متأكد من حذف هذا الخبر؟')) return;
     try {
       await window.MojazAPI.remove(id);
@@ -198,12 +225,19 @@
   };
 
   window.editNews = async (id) => {
+    if (!id || id === 'null' || id === 'undefined') {
+      showToast('❌ معرّف الخبر غير صالح');
+      return;
+    }
     try {
       const news = await window.MojazAPI.getById(id);
       if (!news) return;
 
+      // ✅ استخدام getItemId بدل news.id || news._id مباشرة
+      const newsId = getItemId(news);
+
       // ملء النموذج ببيانات الخبر
-      editIdInput.value = news.id || news._id;
+      editIdInput.value = newsId;
       titleInput.value = news.title;
       contentInput.value = news.content;
       categoryInput.value = news.category;
@@ -220,6 +254,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
       showToast('📝 تم تحميل بيانات الخبر للتعديل');
     } catch (err) {
+      console.error("editNews error:", err);
       showToast('❌ خطأ في جلب بيانات الخبر');
     }
   };
