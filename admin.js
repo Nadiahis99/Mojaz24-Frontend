@@ -4,6 +4,26 @@
  */
 
 (function () {
+  /* ── Cloudinary Config ── */
+  const CLOUD_NAME   = 'drbpdgp4c';
+  const IMAGE_PRESET = 'mojaz24_images';
+  const CLOUD_BASE   = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}`;
+
+  async function uploadToCloudinary(file, type = 'image') {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', IMAGE_PRESET);
+    formData.append('folder', type === 'image' ? 'mojaz24/images' : type === 'video' ? 'mojaz24/videos' : 'mojaz24/audio');
+    const endpoint = type === 'video' ? 'video' : type === 'raw' ? 'raw' : 'image';
+    const res = await fetch(`${CLOUD_BASE}/${endpoint}/upload`, { method: 'POST', body: formData });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err?.error?.message || 'فشل رفع الملف على Cloudinary');
+    }
+    const data = await res.json();
+    return data.secure_url;
+  }
+
   /* ---- Elements ---- */
   const form          = document.getElementById('adminNewsForm');
   const titleInput    = document.getElementById('newsTitle');
@@ -44,11 +64,18 @@
   const audioFileNameEl   = document.getElementById('audioFileName');
   const audioFilePreview  = document.getElementById('audioFilePreview');
 
-  // In-memory data for current form
-  let currentImageData        = '';
-  let currentContentImageData = '';
-  let currentVideoFileData    = '';
-  let currentAudioFileData    = '';
+  // ── الملفات المختارة (بدل base64) ──
+  let selectedImageFile        = null;
+  let selectedContentImageFile = null;
+  let selectedVideoFile        = null;
+  let selectedAudioFile        = null;
+  let recordedVideoBlob        = null;
+
+  // ── الـ URLs المحفوظة عند التعديل ──
+  let savedImageUrl        = '';
+  let savedContentImageUrl = '';
+  let savedVideoUrl        = '';
+  let savedAudioUrl        = '';
 
   // Recording state
   let mediaRecorder = null;
@@ -62,7 +89,6 @@
     return news?._id || news?.id || '';
   }
 
-  // ── helper: يجيب الـ URL الصحيح للصورة من الـ API response ──
   function getImageUrl(news) {
     return news?.imageUrl || news?.image || '';
   }
@@ -80,71 +106,60 @@
   imageInput?.addEventListener('change', () => {
     const file = imageInput.files[0];
     if (!file) return;
+    selectedImageFile = file;
     imageFileName.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      currentImageData = e.target.result;
-      if (imagePreview) {
-        imagePreview.innerHTML = `<img src="${currentImageData}" alt="preview">`;
-        imagePreview.style.display = 'block';
-      }
-    };
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    if (imagePreview) {
+      imagePreview.innerHTML = `<img src="${url}" alt="preview">`;
+      imagePreview.style.display = 'block';
+    }
   });
 
   /* ---- Content Image Upload Preview ---- */
   contentImageInput?.addEventListener('change', () => {
     const file = contentImageInput.files[0];
     if (!file) return;
+    selectedContentImageFile = file;
     if (contentImageFileName) contentImageFileName.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      currentContentImageData = e.target.result;
-      if (contentImagePreview) {
-        contentImagePreview.innerHTML = `<img src="${currentContentImageData}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
-        contentImagePreview.style.display = 'block';
-      }
-    };
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    if (contentImagePreview) {
+      contentImagePreview.innerHTML = `<img src="${url}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
+      contentImagePreview.style.display = 'block';
+    }
   });
 
   /* ---- Video File Upload ---- */
   videoFileInput?.addEventListener('change', () => {
     const file = videoFileInput.files[0];
     if (!file) return;
+    selectedVideoFile = file;
+    recordedVideoBlob = null;
     if (videoFileNameEl) videoFileNameEl.textContent = file.name;
     clearRecording({ preserveVideoData: true });
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      currentVideoFileData = e.target.result;
-      if (videoFilePreview) {
-        videoFilePreview.innerHTML = `<video src="${currentVideoFileData}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
-        videoFilePreview.style.display = 'block';
-      }
-    };
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    if (videoFilePreview) {
+      videoFilePreview.innerHTML = `<video src="${url}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
+      videoFilePreview.style.display = 'block';
+    }
   });
 
   /* ── Audio File Upload ── */
   audioFileInput?.addEventListener('change', () => {
     const file = audioFileInput.files[0];
     if (!file) return;
+    selectedAudioFile = file;
     if (audioFileNameEl) audioFileNameEl.textContent = file.name;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      currentAudioFileData = e.target.result;
-      if (audioFilePreview) {
-        audioFilePreview.innerHTML = `
+    const url = URL.createObjectURL(file);
+    if (audioFilePreview) {
+      audioFilePreview.innerHTML = `
           <audio controls style="width:100%;margin-top:8px;border-radius:8px;">
-            <source src="${currentAudioFileData}" type="${file.type}">
+            <source src="${url}" type="${file.type}">
           </audio>
           <p style="font-size:12px;color:var(--text-muted,#888);margin:4px 0 0;">
             ${esc(file.name)} — ${(file.size / 1024).toFixed(0)} KB
           </p>`;
-        audioFilePreview.style.display = 'block';
-      }
-    };
-    reader.readAsDataURL(file);
+      audioFilePreview.style.display = 'block';
+    }
   });
 
   /* ---- Video Recording ---- */
@@ -163,16 +178,13 @@
           return;
         }
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        recordedVideoBlob = blob;
+        selectedVideoFile = null;
         const url = URL.createObjectURL(blob);
-        const fr = new FileReader();
-        fr.onload = (ev) => {
-          currentVideoFileData = ev.target.result;
-          if (videoFilePreview) {
-            videoFilePreview.innerHTML = `<video src="${url}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
-            videoFilePreview.style.display = 'block';
-          }
-        };
-        fr.readAsDataURL(blob);
+        if (videoFilePreview) {
+          videoFilePreview.innerHTML = `<video src="${url}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
+          videoFilePreview.style.display = 'block';
+        }
         if (recordPreviewEl) recordPreviewEl.style.display = 'none';
         if (recordedVideoPreview) { recordedVideoPreview.src = url; recordedVideoPreview.style.display = 'block'; }
         if (clearRecordBtn) clearRecordBtn.style.display = 'inline-flex';
@@ -229,7 +241,7 @@
     }
     mediaRecorder = null;
     recordedChunks = [];
-    if (!preserveVideoData) currentVideoFileData = '';
+    if (!preserveVideoData) { recordedVideoBlob = null; selectedVideoFile = null; }
     stopRecordTimer();
     if (recordPreviewEl) { recordPreviewEl.srcObject = null; recordPreviewEl.style.display = 'none'; }
     if (recordedVideoPreview) { recordedVideoPreview.src = ''; recordedVideoPreview.style.display = 'none'; }
@@ -255,34 +267,53 @@
       return;
     }
 
-    const existing = id ? (MojazNewsStore.getById(id) || {}) : {};
-    // عند التعديل نحتفظ بالـ URL القديم من الـ API لو ما جاش صورة جديدة
-    const imageToUse        = currentImageData        || (id ? (getImageUrl(existing)       || '') : '');
-    const contentImageToUse = currentContentImageData || (id ? (getContentImageUrl(existing) || '') : '');
-    const videoFileToUse    = currentVideoFileData    || (id ? (getVideoFileUrl(existing)    || '') : '');
-    const audioFileToUse    = currentAudioFileData    || (id ? (getAudioFileUrl(existing)    || '') : '');
-
     if (submitBtn) submitBtn.disabled = true;
 
     try {
+      // ── رفع الملفات الجديدة على Cloudinary ──
+      let imageUrl        = savedImageUrl;
+      let contentImageUrl = savedContentImageUrl;
+      let videoFileUrl    = savedVideoUrl;
+      let audioFileUrl    = savedAudioUrl;
+
+      if (selectedImageFile) {
+        showToast('⏳ جاري رفع صورة الغلاف...');
+        imageUrl = await uploadToCloudinary(selectedImageFile, 'image');
+      }
+      if (selectedContentImageFile) {
+        showToast('⏳ جاري رفع صورة المحتوى...');
+        contentImageUrl = await uploadToCloudinary(selectedContentImageFile, 'image');
+      }
+      if (selectedVideoFile) {
+        showToast('⏳ جاري رفع الفيديو...');
+        videoFileUrl = await uploadToCloudinary(selectedVideoFile, 'video');
+      } else if (recordedVideoBlob) {
+        showToast('⏳ جاري رفع التسجيل...');
+        videoFileUrl = await uploadToCloudinary(new File([recordedVideoBlob], 'recorded.webm', { type: 'video/webm' }), 'video');
+      }
+      if (selectedAudioFile) {
+        showToast('⏳ جاري رفع الصوت...');
+        audioFileUrl = await uploadToCloudinary(selectedAudioFile, 'raw');
+      }
+
       if (id) {
         await MojazNewsStore.update(id, {
           title, content, category,
-          image: imageToUse,
-          contentImage: contentImageToUse,
+          image: imageUrl,
+          contentImage: contentImageUrl,
           video,
-          videoFile: videoFileToUse,
-          audioFile: audioFileToUse
+          videoFile: videoFileUrl,
+          audioFile: audioFileUrl
         });
         showToast('✅ تم تحديث الخبر بنجاح');
       } else {
         await MojazNewsStore.add({
           title, content, category,
-          image: imageToUse,
-          contentImage: contentImageToUse,
+          image: imageUrl,
+          contentImage: contentImageUrl,
           video,
-          videoFile: videoFileToUse,
-          audioFile: audioFileToUse
+          videoFile: videoFileUrl,
+          audioFile: audioFileUrl
         });
         showToast('✅ تم نشر الخبر بنجاح');
       }
@@ -305,9 +336,15 @@
   function resetForm() {
     form?.reset();
     editIdInput.value = '';
-    currentImageData        = '';
-    currentContentImageData = '';
-    currentAudioFileData    = '';
+    selectedImageFile = null;
+    selectedContentImageFile = null;
+    selectedVideoFile = null;
+    selectedAudioFile = null;
+    recordedVideoBlob = null;
+    savedImageUrl = '';
+    savedContentImageUrl = '';
+    savedVideoUrl = '';
+    savedAudioUrl = '';
     clearRecording();
     if (imagePreview)         { imagePreview.innerHTML = '';         imagePreview.style.display = 'none'; }
     if (imageFileName)          imageFileName.textContent = 'اختر صورة...';
@@ -325,44 +362,44 @@
     const news = MojazNewsStore.getById(id);
     if (!news) return;
 
-    const imgUrl         = getImageUrl(news);
-    const contentImgUrl  = getContentImageUrl(news);
-    const videoUrl       = getVideoFileUrl(news);
-    const audioUrl       = getAudioFileUrl(news);
+    savedImageUrl        = getImageUrl(news);
+    savedContentImageUrl = getContentImageUrl(news);
+    savedVideoUrl        = getVideoFileUrl(news);
+    savedAudioUrl        = getAudioFileUrl(news);
+    selectedImageFile = null;
+    selectedContentImageFile = null;
+    selectedVideoFile = null;
+    selectedAudioFile = null;
+    recordedVideoBlob = null;
 
     editIdInput.value       = id;
     titleInput.value        = news.title;
     contentInput.value      = news.content;
     categoryInput.value     = news.category;
     videoInput.value        = news.video || '';
-    // نحفظ الـ URL مش الـ base64 عشان لو ما تغيرش نبعته زي ما هو
-    currentImageData        = imgUrl;
-    currentContentImageData = contentImgUrl;
-    currentVideoFileData    = videoUrl;
-    currentAudioFileData    = audioUrl;
 
-    if (imagePreview && imgUrl) {
-      imagePreview.innerHTML = `<img src="${imgUrl}" alt="preview">`;
+    if (imagePreview && savedImageUrl) {
+      imagePreview.innerHTML = `<img src="${savedImageUrl}" alt="preview">`;
       imagePreview.style.display = 'block';
       if (imageFileName) imageFileName.textContent = 'صورة محفوظة';
     }
 
-    if (contentImagePreview && contentImgUrl) {
-      contentImagePreview.innerHTML = `<img src="${contentImgUrl}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
+    if (contentImagePreview && savedContentImageUrl) {
+      contentImagePreview.innerHTML = `<img src="${savedContentImageUrl}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
       contentImagePreview.style.display = 'block';
       if (contentImageFileName) contentImageFileName.textContent = 'صورة محتوى محفوظة';
     }
 
-    if (videoFilePreview && videoUrl) {
-      videoFilePreview.innerHTML = `<video src="${videoUrl}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
+    if (videoFilePreview && savedVideoUrl) {
+      videoFilePreview.innerHTML = `<video src="${savedVideoUrl}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
       videoFilePreview.style.display = 'block';
       if (videoFileNameEl) videoFileNameEl.textContent = 'فيديو محفوظ';
     }
 
-    if (audioFilePreview && audioUrl) {
+    if (audioFilePreview && savedAudioUrl) {
       audioFilePreview.innerHTML = `
         <audio controls style="width:100%;margin-top:8px;border-radius:8px;">
-          <source src="${audioUrl}">
+          <source src="${savedAudioUrl}">
         </audio>
         <p style="font-size:12px;color:var(--text-muted,#888);margin:4px 0 0;">تسجيل صوتي محفوظ</p>`;
       audioFilePreview.style.display = 'block';
@@ -442,7 +479,6 @@
 
     newsFeed.innerHTML = '';
     allNews.forEach(news => {
-      // ✅ نستخدم imageUrl (من الـ API) أو image كـ fallback
       const thumbUrl = getImageUrl(news);
       const newsId   = getNewsId(news);
 
