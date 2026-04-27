@@ -1,41 +1,41 @@
 /**
- * مُوجز 24 — Admin News Builder
- * Manages: add, edit, delete news via localStorage
+ * مُوجز 24 — Admin News Builder (Base64 + Compression Version)
  */
 
 (function () {
-  /* ── Cloudinary Config ── */
-  // تأكدي أن هذا الـ Preset مضبوط على Unsigned في إعدادات Cloudinary
-  const CLOUD_NAME   = 'drbpdgp4c';
-  const IMAGE_PRESET = 'mojaz24_images';
-  const CLOUD_BASE   = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}`;
+  /* ── Helper Functions: معالجة الصور ── */
 
-  async function uploadToCloudinary(file, type = 'image') {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', IMAGE_PRESET);
-    
-    // تنظيم المجلدات بناءً على النوع
-    const folder = `mojaz24/${type}s`;
-    formData.append('folder', folder);
+  // دالة لضغط الصورة وتحويلها لـ Base64
+  async function compressAndEncodeImage(file, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
 
-    // تحديد الـ endpoint الصحيح: 
-    // Cloudinary يعالج الصوت (Audio) ضمن مسار الـ 'video'
-    const endpoint = (type === 'video' || type === 'audio') ? 'video' : 'image';
+          // تصغير الأبعاد إذا كانت أكبر من الحد المسموح
+          if (width > maxWidth) {
+            height = (maxWidth / width) * height;
+            width = maxWidth;
+          }
 
-    const res = await fetch(`${CLOUD_BASE}/${endpoint}/upload`, { 
-      method: 'POST', 
-      body: formData 
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // تحويل لـ Base64 بصيغة JPEG لتقليل الحجم جداً
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressedBase64);
+        };
+      };
+      reader.onerror = (error) => reject(error);
     });
-
-    if (!res.ok) {
-      const err = await res.json();
-      console.error('Cloudinary Error:', err); // لعرض تفاصيل الخطأ في الـ Console
-      throw new Error(err?.error?.message || 'فشل رفع الملف على Cloudinary');
-    }
-
-    const data = await res.json();
-    return data.secure_url;
   }
 
   /* ---- Elements ---- */
@@ -43,75 +43,33 @@
   const titleInput    = document.getElementById('newsTitle');
   const contentInput  = document.getElementById('newsContent');
   const categoryInput = document.getElementById('newsCategory');
-  const videoInput    = document.getElementById('newsVideo'); // YouTube Link
+  const videoLinkInput = document.getElementById('newsVideo'); 
   const editIdInput    = document.getElementById('editNewsId');
   const submitBtn      = document.getElementById('submitBtn');
-  const cancelBtn      = document.getElementById('cancelEditBtn');
   const formTitleEl   = document.getElementById('formTitle');
-  const newsFeed       = document.getElementById('adminNewsFeed');
-  const filterSelect   = document.getElementById('filterCategory');
   
-  // Previews
+  // Inputs & Previews
   const imageInput    = document.getElementById('newsImage');
   const imagePreview  = document.getElementById('imagePreview');
-  const imageFileName = document.getElementById('imageFileName');
-
-  const contentImageInput    = document.getElementById('newsContentImage');
-  const contentImagePreview  = document.getElementById('contentImagePreview');
-  const contentImageFileName = document.getElementById('contentImageFileName');
-
-  const videoFileInput       = document.getElementById('newsVideoFile');
-  const videoFilePreview      = document.getElementById('videoFilePreview');
-  const videoFileNameEl       = document.getElementById('videoFileName');
-
-  const audioFileInput    = document.getElementById('newsAudioFile');
-  const audioFileNameEl   = document.getElementById('audioFileName');
-  const audioFilePreview  = document.getElementById('audioFilePreview');
-
-  // Recording elements
-  const startRecordBtn        = document.getElementById('startRecordBtn');
-  const stopRecordBtn         = document.getElementById('stopRecordBtn');
-  const recordTimerEl         = document.getElementById('recordTimer');
-  const recordPreviewEl       = document.getElementById('recordPreview');
-  const recordedVideoPreview  = document.getElementById('recordedVideoPreview');
-  const clearRecordBtn        = document.getElementById('clearRecordBtn');
+  const contentImageInput = document.getElementById('newsContentImage');
+  const contentImagePreview = document.getElementById('contentImagePreview');
 
   /* ── الملفات المختارة ── */
   let selectedImageFile        = null;
   let selectedContentImageFile = null;
-  let selectedVideoFile        = null;
-  let selectedAudioFile        = null;
-  let recordedVideoBlob        = null;
 
-  /* ── الـ URLs المحفوظة عند التعديل ── */
+  /* ── الـ Base64 المحفوظ عند التعديل ── */
   let savedImageUrl        = '';
   let savedContentImageUrl = '';
-  let savedVideoUrl        = '';
-  let savedAudioUrl        = '';
-
-  // Recording state
-  let mediaRecorder = null;
-  let activeRecordStream = null;
-  let recordedChunks = [];
-  let recordTimerInterval = null;
-  let recordSeconds = 0;
-  let suppressRecordSave = false;
-
-  function getNewsId(news) { return news?._id || news?.id || ''; }
-  function getImageUrl(news) { return news?.imageUrl || news?.image || ''; }
-  function getContentImageUrl(news) { return news?.contentImage || ''; }
-  function getVideoFileUrl(news) { return news?.videoUrl || news?.videoFile || ''; }
-  function getAudioFileUrl(news) { return news?.audioFile || ''; }
 
   /* ---- Handlers for File Selection ---- */
   imageInput?.addEventListener('change', () => {
     const file = imageInput.files[0];
     if (!file) return;
     selectedImageFile = file;
-    imageFileName.textContent = file.name;
     const url = URL.createObjectURL(file);
     if (imagePreview) {
-      imagePreview.innerHTML = `<img src="${url}" alt="preview">`;
+      imagePreview.innerHTML = `<img src="${url}" style="width:100px; border-radius:8px;">`;
       imagePreview.style.display = 'block';
     }
   });
@@ -120,109 +78,12 @@
     const file = contentImageInput.files[0];
     if (!file) return;
     selectedContentImageFile = file;
-    if (contentImageFileName) contentImageFileName.textContent = file.name;
     const url = URL.createObjectURL(file);
     if (contentImagePreview) {
-      contentImagePreview.innerHTML = `<img src="${url}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
+      contentImagePreview.innerHTML = `<img src="${url}" style="width:100px; border-radius:8px;">`;
       contentImagePreview.style.display = 'block';
     }
   });
-
-  videoFileInput?.addEventListener('change', () => {
-    const file = videoFileInput.files[0];
-    if (!file) return;
-    selectedVideoFile = file;
-    recordedVideoBlob = null;
-    if (videoFileNameEl) videoFileNameEl.textContent = file.name;
-    clearRecording({ preserveVideoData: true });
-    const url = URL.createObjectURL(file);
-    if (videoFilePreview) {
-      videoFilePreview.innerHTML = `<video src="${url}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
-      videoFilePreview.style.display = 'block';
-    }
-  });
-
-  audioFileInput?.addEventListener('change', () => {
-    const file = audioFileInput.files[0];
-    if (!file) return;
-    selectedAudioFile = file;
-    if (audioFileNameEl) audioFileNameEl.textContent = file.name;
-    const url = URL.createObjectURL(file);
-    if (audioFilePreview) {
-      audioFilePreview.innerHTML = `
-          <audio controls style="width:100%;margin-top:8px;border-radius:8px;">
-            <source src="${url}" type="${file.type}">
-          </audio>
-          <p style="font-size:12px;color:#888;margin:4px 0 0;">${file.name}</p>`;
-      audioFilePreview.style.display = 'block';
-    }
-  });
-
-  /* ---- Video Recording Logic ---- */
-  startRecordBtn?.addEventListener('click', async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      activeRecordStream = stream;
-      recordedChunks = [];
-      mediaRecorder = new MediaRecorder(stream);
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
-        activeRecordStream = null;
-        if (suppressRecordSave) { suppressRecordSave = false; return; }
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        recordedVideoBlob = blob;
-        selectedVideoFile = null;
-        const url = URL.createObjectURL(blob);
-        if (videoFilePreview) {
-          videoFilePreview.innerHTML = `<video src="${url}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
-          videoFilePreview.style.display = 'block';
-        }
-        if (recordPreviewEl) recordPreviewEl.style.display = 'none';
-        if (recordedVideoPreview) { recordedVideoPreview.src = url; recordedVideoPreview.style.display = 'block'; }
-        if (clearRecordBtn) clearRecordBtn.style.display = 'inline-flex';
-        stopRecordTimer();
-        if (startRecordBtn) startRecordBtn.style.display = 'inline-flex';
-        if (stopRecordBtn) stopRecordBtn.style.display = 'none';
-      };
-      if (recordPreviewEl) { recordPreviewEl.srcObject = stream; recordPreviewEl.style.display = 'block'; }
-      mediaRecorder.start();
-      startRecordTimer();
-      if (startRecordBtn) startRecordBtn.style.display = 'none';
-      if (stopRecordBtn) stopRecordBtn.style.display = 'inline-flex';
-    } catch (err) {
-      showToast('⚠️ تعذّر الوصول إلى الكاميرا');
-    }
-  });
-
-  stopRecordBtn?.addEventListener('click', () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  });
-
-  function startRecordTimer() {
-    recordSeconds = 0;
-    if (recordTimerEl) recordTimerEl.style.display = 'inline-flex';
-    recordTimerInterval = setInterval(() => {
-      recordSeconds++;
-      const m = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
-      const s = String(recordSeconds % 60).padStart(2, '0');
-      if (recordTimerEl) recordTimerEl.textContent = `${m}:${s}`;
-    }, 1000);
-  }
-
-  function stopRecordTimer() {
-    clearInterval(recordTimerInterval);
-    if (recordTimerEl) { recordTimerEl.style.display = 'none'; recordTimerEl.textContent = '00:00'; }
-  }
-
-  function clearRecording(options = {}) {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      suppressRecordSave = true;
-      mediaRecorder.stop();
-    }
-    stopRecordTimer();
-    if (!options.preserveVideoData) { recordedVideoBlob = null; selectedVideoFile = null; }
-  }
 
   /* ---- Form Submit (Add / Edit) ---- */
   form?.addEventListener('submit', async (e) => {
@@ -231,60 +92,44 @@
     const title    = titleInput.value.trim();
     const content  = contentInput.value.trim();
     const category = categoryInput.value;
-    const video    = videoInput.value.trim();
+    const video    = videoLinkInput.value.trim();
     const id       = editIdInput.value;
 
     if (!title || !content || !category) {
-      showToast('⚠️ يرجى ملء جميع الحقول المطلوبة');
+      showToast('⚠️ يرجى ملء الحقول المطلوبة');
       return;
     }
 
     if (submitBtn) submitBtn.disabled = true;
 
     try {
-      let imageUrl        = savedImageUrl;
-      let contentImageUrl = savedContentImageUrl;
-      let videoFileUrl    = savedVideoUrl;
-      let audioFileUrl    = savedAudioUrl;
+      let finalImageUrl = savedImageUrl;
+      let finalContentImageUrl = savedContentImageUrl;
 
-      // رفع الصور
+      // معالجة صورة الغلاف (ضغط وتحويل)
       if (selectedImageFile) {
-        showToast('⏳ جاري رفع صورة الغلاف...');
-        imageUrl = await uploadToCloudinary(selectedImageFile, 'image');
-      }
-      if (selectedContentImageFile) {
-        showToast('⏳ جاري رفع صورة المحتوى...');
-        contentImageUrl = await uploadToCloudinary(selectedContentImageFile, 'image');
-      }
-      
-      // رفع الفيديو
-      if (selectedVideoFile) {
-        showToast('⏳ جاري رفع الفيديو...');
-        videoFileUrl = await uploadToCloudinary(selectedVideoFile, 'video');
-      } else if (recordedVideoBlob) {
-        showToast('⏳ جاري رفع التسجيل...');
-        const file = new File([recordedVideoBlob], 'recorded.webm', { type: 'video/webm' });
-        videoFileUrl = await uploadToCloudinary(file, 'video');
+        showToast('⏳ جاري ضغط صورة الغلاف...');
+        finalImageUrl = await compressAndEncodeImage(selectedImageFile, 800, 0.6);
       }
 
-      // رفع الصوت
-      if (selectedAudioFile) {
-        showToast('⏳ جاري رفع الصوت...');
-        audioFileUrl = await uploadToCloudinary(selectedAudioFile, 'audio');
+      // معالجة صورة المحتوى
+      if (selectedContentImageFile) {
+        showToast('⏳ جاري ضغط صورة المحتوى...');
+        finalContentImageUrl = await compressAndEncodeImage(selectedContentImageFile, 1000, 0.6);
       }
 
       const newsData = {
-        title, content, category,
-        image: imageUrl,
-        contentImage: contentImageUrl,
-        video,
-        videoFile: videoFileUrl,
-        audioFile: audioFileUrl
+        title,
+        content,
+        category,
+        image: finalImageUrl,        // سيرسل كـ Base64 String
+        contentImage: finalContentImageUrl,
+        video: video                 // رابط يوتيوب كما هو
       };
 
       if (id) {
         await MojazNewsStore.update(id, newsData);
-        showToast('✅ تم تحديث الخبر بنجاح');
+        showToast('✅ تم تحديث الخبر');
       } else {
         await MojazNewsStore.add(newsData);
         showToast('✅ تم نشر الخبر بنجاح');
@@ -293,7 +138,9 @@
       resetForm();
       renderAll();
     } catch (error) {
-      showToast(error.message || 'تعذر حفظ الخبر');
+      // هنا سيظهر لكِ الخطأ الحقيقي إذا كان الـ Backend يرفض البيانات
+      console.error("Submission Error:", error);
+      showToast('❌ خطأ في السيرفر: ' + error.message);
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
@@ -303,23 +150,19 @@
   function resetForm() {
     form?.reset();
     editIdInput.value = '';
-    selectedImageFile = selectedContentImageFile = selectedVideoFile = selectedAudioFile = recordedVideoBlob = null;
-    savedImageUrl = savedContentImageUrl = savedVideoUrl = savedAudioUrl = '';
-    if (imagePreview) { imagePreview.innerHTML = ''; imagePreview.style.display = 'none'; }
-    if (contentImagePreview) { contentImagePreview.innerHTML = ''; contentImagePreview.style.display = 'none'; }
-    if (audioFilePreview) { audioFilePreview.innerHTML = ''; audioFilePreview.style.display = 'none'; }
-    if (videoFilePreview) { videoFilePreview.innerHTML = ''; videoFilePreview.style.display = 'none'; }
+    selectedImageFile = selectedContentImageFile = null;
+    savedImageUrl = savedContentImageUrl = '';
+    if (imagePreview) { imagePreview.style.display = 'none'; imagePreview.innerHTML = ''; }
+    if (contentImagePreview) { contentImagePreview.style.display = 'none'; contentImagePreview.innerHTML = ''; }
     if (formTitleEl) formTitleEl.textContent = 'إضافة خبر جديد';
   }
 
   function renderAll() {
-    // افترضي وجود دوال RenderStats و RenderNewsFeed لديكِ مسبقاً
     if (typeof renderStats === 'function') renderStats();
     if (typeof renderNewsFeed === 'function') renderNewsFeed();
   }
 
-  // تهيئة أولية
-  renderAll();
+  // تهيئة
   MojazNewsStore.ready().then(renderAll);
   window.addEventListener(MojazNewsStore.UPDATE_EVENT, renderAll);
 
