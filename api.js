@@ -20,7 +20,7 @@ const MojazAPI = (() => {
   // ── عنوان الـ API ─────────────────────────────────────────────
   // • للتطوير المحلي: "https://localhost:7030/api"
   // • للـ Production : ضع هنا الدومين الحقيقي بعد الرفع على SmarterASP
-  const BASE_URL = "https://mojaz24.runasp.net";
+  const BASE_URL = "https://mojaz24.runasp.net/api";
   // ─────────────────────────────────────────────────────────────
 
   /**
