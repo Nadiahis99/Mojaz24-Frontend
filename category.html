@@ -1,4 +1,5 @@
-(function() {
+<script>
+  (function() {
   const params = new URLSearchParams(window.location.search);
   const cat = params.get('cat') || '';
 
@@ -98,3 +99,4 @@
   MojazNewsStore.ready().then(renderCategoryNews).catch(renderCategoryNews);
   window.addEventListener(MojazNewsStore.UPDATE_EVENT, renderCategoryNews);
 })();
+</script>
