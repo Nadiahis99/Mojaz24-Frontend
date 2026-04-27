@@ -9,7 +9,7 @@
     (function () {
       try {
         var s = sessionStorage.getItem('mojaz24-session');
-        if (s) { var p = JSON.parse(s); if (p && (p.role==='admin'||p.role==='journalist')) window.location.replace('admin.html'); }
+        if (s) { var p = JSON.parse(s); if (p && (p.role==='Admin'||p.role==='Journalist')) window.location.replace('admin.html'); }
       } catch(e){}
     })();
     (function () {
