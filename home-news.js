@@ -36,6 +36,10 @@ function initHomepageNews() {
     return item?._id || item?.id || "";
   }
 
+  function getImage(item) {
+    return item?.imageUrl || item?.image || item?.contentImage || placeholderImage;
+  }
+
   const placeholderImage = createPlaceholderImage("موجز 24");
 
   function formatNewsDate(ts) {
@@ -97,14 +101,14 @@ function initHomepageNews() {
     }
 
     const paragraphs = getParagraphs(news.content);
-    heroImg.src = news.image || news.contentImage || placeholderImage;
+    heroImg.src = getImage(news);
     heroImg.alt = news.title || "صورة الخبر";
     heroTag.className = `tag hero-tag ${getTagClass(news.category)}`;
     heroTag.textContent = news.category || "خبر";
     heroTitle.textContent = news.title || "";
     heroExcerpt.textContent = paragraphs[0] || news.content || "";
     heroDate.textContent = formatNewsDate(news.createdAt);
-    heroViews.textContent = news.video || news.videoFile ? "يتضمن وسائط" : "منشور";
+    heroViews.textContent = news.videoUrl || news.video || news.videoFile ? "يتضمن وسائط" : "منشور";
     heroReadTime.textContent = estimateReadTime(news.content);
 
     const heroCard = document.querySelector(".hero-card");
@@ -121,12 +125,12 @@ function initHomepageNews() {
     const mostReadItems = allNews.slice(0, 4);
     const feedItems = allNews.slice(1);
     const trendingItems = allNews.slice(0, 5);
-    const mediaItems = allNews.filter((item) => item.video || item.videoFile).slice(0, 4);
+    const mediaItems = allNews.filter((item) => item.videoUrl || item.video || item.videoFile).slice(0, 4);
 
     latestList.innerHTML = latestItems.length
       ? latestItems.map((item) => `
           <a class="latest-item" href="article.html?id=${encodeURIComponent(getNewsId(item))}">
-            <div class="latest-img"><img src="${escapeHtml(item.image || item.contentImage || placeholderImage)}" alt="${escapeHtml(item.title)}" loading="lazy"></div>
+            <div class="latest-img"><img src="${escapeHtml(getImage(item))}" alt="${escapeHtml(item.title)}" loading="lazy"></div>
             <div class="latest-info">
               <span class="tag tag-sm ${getTagClass(item.category)}">${escapeHtml(item.category || "خبر")}</span>
               <h4>${escapeHtml(item.title)}</h4>
@@ -155,7 +159,7 @@ function initHomepageNews() {
       ? feedItems.map((item) => `
           <article class="news-card-h" style="cursor:pointer;" onclick="window.location.href='article.html?id=${encodeURIComponent(getNewsId(item))}'">
             <div class="news-card-img">
-              <img src="${escapeHtml(item.image || item.contentImage || placeholderImage)}" alt="${escapeHtml(item.title)}" loading="lazy">
+              <img src="${escapeHtml(getImage(item))}" alt="${escapeHtml(item.title)}" loading="lazy">
             </div>
             <div class="news-card-body">
               <span class="tag ${getTagClass(item.category)}">${escapeHtml(item.category || "خبر")}</span>
@@ -186,7 +190,7 @@ function initHomepageNews() {
       ? mediaItems.map((item) => `
           <article class="media-card">
             <div class="media-thumb">
-              <img src="${escapeHtml(item.image || item.contentImage || placeholderImage)}" alt="${escapeHtml(item.title)}" loading="lazy">
+              <img src="${escapeHtml(getImage(item))}" alt="${escapeHtml(item.title)}" loading="lazy">
               <div class="media-overlay">
                 <div class="play-circle">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
