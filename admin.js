@@ -1,11 +1,10 @@
 /**
- * مُوجز 24 — Admin News Builder (Base64 + Compression Version)
+ * مُوجز 24 — Admin News Builder (Base64 + API Version)
+ * هذا الملف يربط واجهة الإدارة بالسيرفر عبر MojazAPI
  */
 
 (function () {
-  /* ── Helper Functions: معالجة الصور ── */
-
-  // دالة لضغط الصورة وتحويلها لـ Base64
+  /* ── Helper Functions: معالجة وضغط الصور ── */
   async function compressAndEncodeImage(file, maxWidth = 800, quality = 0.7) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -18,7 +17,6 @@
           let width = img.width;
           let height = img.height;
 
-          // تصغير الأبعاد إذا كانت أكبر من الحد المسموح
           if (width > maxWidth) {
             height = (maxWidth / width) * height;
             width = maxWidth;
@@ -29,7 +27,7 @@
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
 
-          // تحويل لـ Base64 بصيغة JPEG لتقليل الحجم جداً
+          // تحويل لـ Base64 بصيغة JPEG لتقليل الحجم جداً لـ MongoDB
           const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
           resolve(compressedBase64);
         };
@@ -38,38 +36,35 @@
     });
   }
 
-  /* ---- Elements ---- */
-  const form          = document.getElementById('adminNewsForm');
-  const titleInput    = document.getElementById('newsTitle');
-  const contentInput  = document.getElementById('newsContent');
-  const categoryInput = document.getElementById('newsCategory');
-  const videoLinkInput = document.getElementById('newsVideo'); 
-  const editIdInput    = document.getElementById('editNewsId');
-  const submitBtn      = document.getElementById('submitBtn');
-  const formTitleEl   = document.getElementById('formTitle');
+  /* ---- Elements (العناصر) ---- */
+  const form            = document.getElementById('adminNewsForm');
+  const titleInput      = document.getElementById('newsTitle');
+  const contentInput    = document.getElementById('newsContent');
+  const categoryInput   = document.getElementById('newsCategory');
+  const videoLinkInput  = document.getElementById('newsVideo'); 
+  const editIdInput     = document.getElementById('editNewsId');
+  const submitBtn       = document.getElementById('submitBtn');
+  const formTitleEl     = document.getElementById('formTitle');
   
-  // Inputs & Previews
-  const imageInput    = document.getElementById('newsImage');
-  const imagePreview  = document.getElementById('imagePreview');
+  const imageInput      = document.getElementById('newsImage');
+  const imagePreview    = document.getElementById('imagePreview');
   const contentImageInput = document.getElementById('newsContentImage');
   const contentImagePreview = document.getElementById('contentImagePreview');
 
-  /* ── الملفات المختارة ── */
+  /* ── الحالة الداخلية (State) ── */
   let selectedImageFile        = null;
   let selectedContentImageFile = null;
+  let savedImageUrl            = ''; // لحفظ الصورة القديمة عند التعديل
+  let savedContentImageUrl     = '';
 
-  /* ── الـ Base64 المحفوظ عند التعديل ── */
-  let savedImageUrl        = '';
-  let savedContentImageUrl = '';
-
-  /* ---- Handlers for File Selection ---- */
+  /* ---- اختيار الصور ومعاينتها ---- */
   imageInput?.addEventListener('change', () => {
     const file = imageInput.files[0];
     if (!file) return;
     selectedImageFile = file;
     const url = URL.createObjectURL(file);
     if (imagePreview) {
-      imagePreview.innerHTML = `<img src="${url}" style="width:100px; border-radius:8px;">`;
+      imagePreview.innerHTML = `<img src="${url}" style="width:100px; border-radius:8px; margin-top:10px;">`;
       imagePreview.style.display = 'block';
     }
   });
@@ -80,12 +75,12 @@
     selectedContentImageFile = file;
     const url = URL.createObjectURL(file);
     if (contentImagePreview) {
-      contentImagePreview.innerHTML = `<img src="${url}" style="width:100px; border-radius:8px;">`;
+      contentImagePreview.innerHTML = `<img src="${url}" style="width:100px; border-radius:8px; margin-top:10px;">`;
       contentImagePreview.style.display = 'block';
     }
   });
 
-  /* ---- Form Submit (Add / Edit) ---- */
+  /* ---- حفظ الخبر (إضافة أو تعديل) ---- */
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -106,47 +101,51 @@
       let finalImageUrl = savedImageUrl;
       let finalContentImageUrl = savedContentImageUrl;
 
-      // معالجة صورة الغلاف (ضغط وتحويل)
+      // ضغط صورة الغلاف إذا تم اختيار ملف جديد
       if (selectedImageFile) {
-        showToast('⏳ جاري ضغط صورة الغلاف...');
+        showToast('⏳ جاري معالجة صورة الغلاف...');
         finalImageUrl = await compressAndEncodeImage(selectedImageFile, 800, 0.6);
       }
 
-      // معالجة صورة المحتوى
+      // ضغط صورة المحتوى إذا تم اختيار ملف جديد
       if (selectedContentImageFile) {
-        showToast('⏳ جاري ضغط صورة المحتوى...');
+        showToast('⏳ جاري معالجة صورة المحتوى...');
         finalContentImageUrl = await compressAndEncodeImage(selectedContentImageFile, 1000, 0.6);
       }
 
+      // بناء الكائن المتوافق مع الـ DTO في C#
       const newsData = {
         title,
         content,
         category,
-        image: finalImageUrl,        // سيرسل كـ Base64 String
+        image: finalImageUrl,        // Base64 String
         contentImage: finalContentImageUrl,
-        video: video                 // رابط يوتيوب كما هو
+        video: video                 // رابط يوتيوب
       };
 
       if (id) {
-        await MojazNewsStore.update(id, newsData);
-        showToast('✅ تم تحديث الخبر');
+        // تحديث خبر موجود
+        await window.MojazAPI.update(id, newsData);
+        showToast('✅ تم تحديث الخبر بنجاح');
       } else {
-        await MojazNewsStore.add(newsData);
+        // إضافة خبر جديد
+        await window.MojazAPI.add(newsData);
         showToast('✅ تم نشر الخبر بنجاح');
       }
 
       resetForm();
-      renderAll();
+      // تحديث القائمة المعروضة في لوحة الإدارة
+      if (typeof renderNewsFeed === 'function') renderNewsFeed();
+      
     } catch (error) {
-      // هنا سيظهر لكِ الخطأ الحقيقي إذا كان الـ Backend يرفض البيانات
       console.error("Submission Error:", error);
-      showToast('❌ خطأ في السيرفر: ' + error.message);
+      showToast('❌ خطأ: ' + error.message);
     } finally {
       if (submitBtn) submitBtn.disabled = false;
     }
   });
 
-  /* ---- UI Functions ---- */
+  /* ---- وظائف الواجهة (UI) ---- */
   function resetForm() {
     form?.reset();
     editIdInput.value = '';
@@ -157,13 +156,75 @@
     if (formTitleEl) formTitleEl.textContent = 'إضافة خبر جديد';
   }
 
-  function renderAll() {
-    if (typeof renderStats === 'function') renderStats();
-    if (typeof renderNewsFeed === 'function') renderNewsFeed();
+  // دالة لجلب الأخبار وعرضها في لوحة الإدارة (Admin Feed)
+  async function renderNewsFeed() {
+    const feedContainer = document.getElementById('adminNewsFeed');
+    if (!feedContainer) return;
+
+    try {
+      const allNews = await window.MojazAPI.getAll();
+      if (!allNews || allNews.length === 0) {
+        feedContainer.innerHTML = '<p style="text-align:center; padding:20px;">لا توجد أخبار منشورة بعد.</p>';
+        return;
+      }
+
+      feedContainer.innerHTML = allNews.map(item => `
+        <div class="admin-news-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #eee;">
+          <div>
+            <strong style="display:block;">${item.title}</strong>
+            <small style="color:#666;">${item.category} | ${new Date(item.createdAt).toLocaleDateString('ar-EG')}</small>
+          </div>
+          <div style="display:flex; gap:10px;">
+             <button onclick="editNews('${item.id || item._id}')" class="btn-edit" style="background:#4361ee; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">تعديل</button>
+             <button onclick="deleteNews('${item.id || item._id}')" class="btn-delete" style="background:#e63946; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">حذف</button>
+          </div>
+        </div>
+      `).join('');
+    } catch (err) {
+      feedContainer.innerHTML = '<p style="color:red;">خطأ في تحميل الأخبار.</p>';
+    }
   }
 
-  // تهيئة
-  MojazNewsStore.ready().then(renderAll);
-  window.addEventListener(MojazNewsStore.UPDATE_EVENT, renderAll);
+  // جعل دالة الحذف والتعديل متاحة عالمياً للأزرار
+  window.deleteNews = async (id) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الخبر؟')) return;
+    try {
+      await window.MojazAPI.remove(id);
+      showToast('🗑️ تم الحذف بنجاح');
+      renderNewsFeed();
+    } catch (err) {
+      showToast('❌ فشل الحذف: ' + err.message);
+    }
+  };
+
+  window.editNews = async (id) => {
+    try {
+      const news = await window.MojazAPI.getById(id);
+      if (!news) return;
+
+      // ملء النموذج ببيانات الخبر
+      editIdInput.value = news.id || news._id;
+      titleInput.value = news.title;
+      contentInput.value = news.content;
+      categoryInput.value = news.category;
+      videoLinkInput.value = news.video || '';
+      
+      // حفظ الصور القديمة في حال لم يغيرها المستخدم
+      savedImageUrl = news.image || '';
+      savedContentImageUrl = news.contentImage || '';
+
+      if (formTitleEl) formTitleEl.textContent = 'تعديل الخبر';
+      if (submitBtn) submitBtn.textContent = 'تحديث الخبر';
+      
+      // التمرير لأعلى النموذج
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast('📝 تم تحميل بيانات الخبر للتعديل');
+    } catch (err) {
+      showToast('❌ خطأ في جلب بيانات الخبر');
+    }
+  };
+
+  // تشغيل القائمة عند التحميل
+  document.addEventListener('DOMContentLoaded', renderNewsFeed);
 
 })();
