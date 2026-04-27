@@ -24,7 +24,7 @@ const MojazAuth = (function () {
         const session = {
           name:     result.username || result.name || email,
           username: result.username || email,
-          role:     result.role     || "admin",
+          role:     result.role     || "Admin",
           avatar:   (result.username || email)[0].toUpperCase(),
           token:    result.token,
         };
