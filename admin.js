@@ -48,7 +48,7 @@
   let currentImageData        = '';
   let currentContentImageData = '';
   let currentVideoFileData    = '';
-  let currentAudioFileData    = '';   // ← جديد
+  let currentAudioFileData    = '';
 
   // Recording state
   let mediaRecorder = null;
@@ -59,8 +59,21 @@
   let suppressRecordSave = false;
 
   function getNewsId(news) {
-    // الباك إند يُرجع _id (MongoDB ObjectId) أو id
     return news?._id || news?.id || '';
+  }
+
+  // ── helper: يجيب الـ URL الصحيح للصورة من الـ API response ──
+  function getImageUrl(news) {
+    return news?.imageUrl || news?.image || '';
+  }
+  function getContentImageUrl(news) {
+    return news?.contentImage || '';
+  }
+  function getVideoFileUrl(news) {
+    return news?.videoUrl || news?.videoFile || '';
+  }
+  function getAudioFileUrl(news) {
+    return news?.audioFile || '';
   }
 
   /* ---- Image Upload Preview ---- */
@@ -243,38 +256,39 @@
     }
 
     const existing = id ? (MojazNewsStore.getById(id) || {}) : {};
-    const imageToUse        = currentImageData        || (id ? (existing.image        || '') : '');
-    const contentImageToUse = currentContentImageData || (id ? (existing.contentImage || '') : '');
-    const videoFileToUse    = currentVideoFileData    || (id ? (existing.videoFile    || '') : '');
-    const audioFileToUse    = currentAudioFileData    || (id ? (existing.audioFile    || '') : '');  // ← جديد
+    // عند التعديل نحتفظ بالـ URL القديم من الـ API لو ما جاش صورة جديدة
+    const imageToUse        = currentImageData        || (id ? (getImageUrl(existing)       || '') : '');
+    const contentImageToUse = currentContentImageData || (id ? (getContentImageUrl(existing) || '') : '');
+    const videoFileToUse    = currentVideoFileData    || (id ? (getVideoFileUrl(existing)    || '') : '');
+    const audioFileToUse    = currentAudioFileData    || (id ? (getAudioFileUrl(existing)    || '') : '');
 
     if (submitBtn) submitBtn.disabled = true;
 
     try {
       if (id) {
-      await MojazNewsStore.update(id, {
-        title, content, category,
-        image: imageToUse,
-        contentImage: contentImageToUse,
-        video,
-        videoFile: videoFileToUse,
-        audioFile: audioFileToUse   // ← جديد
-      });
-      showToast('✅ تم تحديث الخبر بنجاح');
-    } else {
-      await MojazNewsStore.add({
-        title, content, category,
-        image: imageToUse,
-        contentImage: contentImageToUse,
-        video,
-        videoFile: videoFileToUse,
-        audioFile: audioFileToUse   // ← جديد
-      });
-      showToast('✅ تم نشر الخبر بنجاح');
-    }
+        await MojazNewsStore.update(id, {
+          title, content, category,
+          image: imageToUse,
+          contentImage: contentImageToUse,
+          video,
+          videoFile: videoFileToUse,
+          audioFile: audioFileToUse
+        });
+        showToast('✅ تم تحديث الخبر بنجاح');
+      } else {
+        await MojazNewsStore.add({
+          title, content, category,
+          image: imageToUse,
+          contentImage: contentImageToUse,
+          video,
+          videoFile: videoFileToUse,
+          audioFile: audioFileToUse
+        });
+        showToast('✅ تم نشر الخبر بنجاح');
+      }
 
-    resetForm();
-    renderAll();
+      resetForm();
+      renderAll();
     } catch (error) {
       showToast(error.message || 'تعذر حفظ الخبر');
     } finally {
@@ -293,14 +307,14 @@
     editIdInput.value = '';
     currentImageData        = '';
     currentContentImageData = '';
-    currentAudioFileData    = '';   // ← جديد
+    currentAudioFileData    = '';
     clearRecording();
     if (imagePreview)         { imagePreview.innerHTML = '';         imagePreview.style.display = 'none'; }
     if (imageFileName)          imageFileName.textContent = 'اختر صورة...';
     if (contentImagePreview)  { contentImagePreview.innerHTML = '';  contentImagePreview.style.display = 'none'; }
     if (contentImageFileName)   contentImageFileName.textContent = 'اختر صورة للمحتوى...';
-    if (audioFilePreview)     { audioFilePreview.innerHTML = '';     audioFilePreview.style.display = 'none'; }  // ← جديد
-    if (audioFileNameEl)        audioFileNameEl.textContent = 'اختر ملف صوتي...';                               // ← جديد
+    if (audioFilePreview)     { audioFilePreview.innerHTML = '';     audioFilePreview.style.display = 'none'; }
+    if (audioFileNameEl)        audioFileNameEl.textContent = 'اختر ملف صوتي...';
     if (formTitleEl)  formTitleEl.textContent = 'إضافة خبر جديد';
     if (cancelBtn)    cancelBtn.style.display = 'none';
     if (submitBtn)    submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg> نشر الخبر';
@@ -311,39 +325,44 @@
     const news = MojazNewsStore.getById(id);
     if (!news) return;
 
+    const imgUrl         = getImageUrl(news);
+    const contentImgUrl  = getContentImageUrl(news);
+    const videoUrl       = getVideoFileUrl(news);
+    const audioUrl       = getAudioFileUrl(news);
+
     editIdInput.value       = id;
     titleInput.value        = news.title;
     contentInput.value      = news.content;
     categoryInput.value     = news.category;
     videoInput.value        = news.video || '';
-    currentImageData        = news.image        || '';
-    currentContentImageData = news.contentImage || '';
-    currentVideoFileData    = news.videoFile    || '';
-    currentAudioFileData    = news.audioFile    || '';   // ← جديد
+    // نحفظ الـ URL مش الـ base64 عشان لو ما تغيرش نبعته زي ما هو
+    currentImageData        = imgUrl;
+    currentContentImageData = contentImgUrl;
+    currentVideoFileData    = videoUrl;
+    currentAudioFileData    = audioUrl;
 
-    if (imagePreview && news.image) {
-      imagePreview.innerHTML = `<img src="${news.image}" alt="preview">`;
+    if (imagePreview && imgUrl) {
+      imagePreview.innerHTML = `<img src="${imgUrl}" alt="preview">`;
       imagePreview.style.display = 'block';
       if (imageFileName) imageFileName.textContent = 'صورة محفوظة';
     }
 
-    if (contentImagePreview && news.contentImage) {
-      contentImagePreview.innerHTML = `<img src="${news.contentImage}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
+    if (contentImagePreview && contentImgUrl) {
+      contentImagePreview.innerHTML = `<img src="${contentImgUrl}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:var(--radius);">`;
       contentImagePreview.style.display = 'block';
       if (contentImageFileName) contentImageFileName.textContent = 'صورة محتوى محفوظة';
     }
 
-    if (videoFilePreview && news.videoFile) {
-      videoFilePreview.innerHTML = `<video src="${news.videoFile}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
+    if (videoFilePreview && videoUrl) {
+      videoFilePreview.innerHTML = `<video src="${videoUrl}" controls style="width:100%;max-height:180px;border-radius:var(--radius);background:#000;"></video>`;
       videoFilePreview.style.display = 'block';
       if (videoFileNameEl) videoFileNameEl.textContent = 'فيديو محفوظ';
     }
 
-    // ── تحميل الصوت المحفوظ عند التعديل ── // ← جديد
-    if (audioFilePreview && news.audioFile) {
+    if (audioFilePreview && audioUrl) {
       audioFilePreview.innerHTML = `
         <audio controls style="width:100%;margin-top:8px;border-radius:8px;">
-          <source src="${news.audioFile}">
+          <source src="${audioUrl}">
         </audio>
         <p style="font-size:12px;color:var(--text-muted,#888);margin:4px 0 0;">تسجيل صوتي محفوظ</p>`;
       audioFilePreview.style.display = 'block';
@@ -423,26 +442,30 @@
 
     newsFeed.innerHTML = '';
     allNews.forEach(news => {
+      // ✅ نستخدم imageUrl (من الـ API) أو image كـ fallback
+      const thumbUrl = getImageUrl(news);
+      const newsId   = getNewsId(news);
+
       const item = document.createElement('article');
       item.className = 'admin-news-item';
       item.innerHTML = `
         <div class="admin-news-item-inner">
-          ${news.image
-            ? `<div class="admin-news-thumb"><img src="${esc(news.image)}" alt="${esc(news.title)}" loading="lazy"></div>`
+          ${thumbUrl
+            ? `<div class="admin-news-thumb"><img src="${esc(thumbUrl)}" alt="${esc(news.title)}" loading="lazy"></div>`
             : '<div class="admin-news-thumb admin-news-thumb-empty"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>'}
           <div class="admin-news-body">
             <div class="admin-news-meta">
               <span class="cat-card-badge">${esc(news.category)}</span>
               ${news.video ? '<span class="admin-has-video"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg> فيديو</span>' : ''}
-              ${news.audioFile ? '<span class="admin-has-video"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> صوت</span>' : ''}
+              ${getAudioFileUrl(news) ? '<span class="admin-has-video"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> صوت</span>' : ''}
               <time class="comment-time">${formatDate(news.createdAt)}</time>
-              ${news.updatedAt !== news.createdAt ? `<span class="admin-edited">معدّل</span>` : ''}
+              ${news.updatedAt && news.updatedAt !== news.createdAt ? `<span class="admin-edited">معدّل</span>` : ''}
             </div>
             <h4 class="admin-news-title">${esc(news.title)}</h4>
             <p class="admin-news-excerpt">${esc(news.content.length > 150 ? news.content.slice(0, 150) + '...' : news.content)}</p>
           </div>
           <div class="admin-news-actions">
-            <button class="admin-action-btn admin-edit-btn" data-id="${news.id}" title="تعديل">
+            <button class="admin-action-btn admin-edit-btn" data-id="${newsId}" title="تعديل">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
               تعديل
             </button>
@@ -450,14 +473,13 @@
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
               عرض
             </a>
-            <button class="admin-action-btn admin-delete-btn" data-id="${news.id}" title="حذف">
+            <button class="admin-action-btn admin-delete-btn" data-id="${newsId}" title="حذف">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="m19 6-.867 12.142A2 2 0 0 1 16.138 20H7.862a2 2 0 0 1-1.995-1.858L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               حذف
             </button>
           </div>
         </div>`;
-      item.querySelector('.admin-edit-btn')?.setAttribute('data-id', getNewsId(news));
-      item.querySelector('.admin-delete-btn')?.setAttribute('data-id', getNewsId(news));
+
       newsFeed.appendChild(item);
     });
 
