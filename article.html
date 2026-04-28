@@ -541,11 +541,20 @@ if (!news) {
         </a>
 
         <div class="article-card">
-          ${news.image ? `<img src="${escapeHtml(news.image)}" alt="${escapeHtml(news.title)}" class="article-hero-img" loading="lazy">` : ''}
-          <div class="article-body">
-            <div class="article-top-meta">
-              <span class="tag ${getTagClass(news.category)}">${escapeHtml(news.category || 'خبر')}</span>
-            </div>
+  ${(news.imageUrl || news.image) ? `
+    <img 
+      src="${escapeHtml(news.imageUrl || news.image)}" 
+      alt="${escapeHtml(news.title)}" 
+      class="article-hero-img" 
+      loading="lazy">
+  ` : ''}
+  
+  <div class="article-body">
+    <div class="article-top-meta">
+      <span class="tag ${getTagClass(news.category)}">
+        ${escapeHtml(news.category || 'خبر')}
+      </span>
+    </div>
             <h1 class="article-title">${escapeHtml(news.title)}</h1>
             <div class="article-meta-bar">
               <span class="meta-item">
