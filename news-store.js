@@ -1,16 +1,8 @@
-/**
- * مُوجز 24 — News Store
- * طبقة وسيطة بين الـ UI والـ API
- *
- * ملاحظة: الـ API لا يوجد بها PUT /News/{id}
- * لذا التعديل = حذف القديم + إضافة جديد
- */
 const MojazNewsStore = (() => {
   const STORAGE_KEY  = "mojaz24-news-cache";
   const UPDATE_EVENT = "mojaz:news-updated";
   let newsCache = [];
 
-  // ── Cache helpers ─────────────────────────────────────────────
   function readCache() {
     try {
       newsCache = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
@@ -23,7 +15,7 @@ const MojazNewsStore = (() => {
   function persistCache() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newsCache));
-    } catch { /* تجاهل إذا كانت التخزين ممتلئاً */ }
+    } catch {}
   }
 
   function emitUpdate() {
@@ -32,24 +24,18 @@ const MojazNewsStore = (() => {
     }));
   }
 
-  // ── API sync ──────────────────────────────────────────────────
   async function refresh() {
     if (!window.MojazAPI) throw new Error("MojazAPI غير متاح");
-
     const news = await window.MojazAPI.getAll();
-    // الباك إند قد يُرجع مصفوفة مباشرة أو { data: [...] }
     newsCache = Array.isArray(news)
       ? news
       : Array.isArray(news?.data) ? news.data : [];
-
     persistCache();
     emitUpdate();
     return [...newsCache];
   }
 
-  // ── Init ──────────────────────────────────────────────────────
   readCache();
-  // محاولة تحديث من الـ API فور التحميل، مع الاحتفاظ بالكاش عند الفشل
   let readyPromise = refresh().catch(() => [...newsCache]);
 
   function ready() { return readyPromise; }
@@ -61,24 +47,16 @@ const MojazNewsStore = (() => {
     ) || null;
   }
 
-  // ── CRUD ──────────────────────────────────────────────────────
-
   async function add(item) {
     const response = await window.MojazAPI.add(item);
     await refresh();
-    // الباك إند يُرجع الكائن مباشرة أو { news: {...} }
-    return response?.news ?? response;
+    return response?.data ?? response;
   }
 
-  /**
-   * تعديل: الـ API ليس لديه PUT، نحذف ونُعيد الإضافة
-   * نحتفظ بـ createdAt الأصلي إذا أرجعه الـ API
-   */
   async function update(id, item) {
-    await window.MojazAPI.remove(id);
-    const response = await window.MojazAPI.add(item);
+    const response = await window.MojazAPI.update(id, item);
     await refresh();
-    return response?.news ?? response;
+    return response?.data ?? response;
   }
 
   async function remove(id) {
@@ -87,7 +65,6 @@ const MojazNewsStore = (() => {
     return response;
   }
 
-  // ── Selectors ─────────────────────────────────────────────────
   function getByCategory(category) {
     return getAll().filter((item) => item.category === category);
   }
