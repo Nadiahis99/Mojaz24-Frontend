@@ -325,85 +325,106 @@
   <script>
     // Category page init
     (function() {
-      const params = new URLSearchParams(window.location.search);
-      const cat = params.get('cat') || '';
+  const params = new URLSearchParams(window.location.search);
+  const cat = params.get('cat') || '';
 
-      const catBadge  = document.getElementById('catBadge');
-      const catTitle  = document.getElementById('catTitle');
-      const catCount  = document.getElementById('catCount');
-      const feed      = document.getElementById('categoryNewsFeed');
+  const catBadge  = document.getElementById('catBadge');
+  const catTitle  = document.getElementById('catTitle');
+  const catCount  = document.getElementById('catCount');
+  const feed      = document.getElementById('categoryNewsFeed');
 
-      if (catBadge)  catBadge.textContent  = cat || 'أخبار';
-      if (catTitle)  catTitle.textContent  = cat || 'جميع الأخبار';
-      document.title = `مُوجز 24 | ${cat || 'الأخبار'}`;
+  if (catBadge)  catBadge.textContent  = cat || 'أخبار';
+  if (catTitle)  catTitle.textContent  = cat || 'جميع الأخبار';
+  document.title = `مُوجز 24 | ${cat || 'الأخبار'}`;
 
-      function renderCategoryNews() {
-        const allNews = MojazNewsStore.getAll();
-        const filtered = cat ? allNews.filter(n => n.category === cat) : allNews;
+  function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
 
-        if (catCount) catCount.textContent = `${filtered.length} خبر`;
+  function formatNewsDate(ts) {
+    if (!ts) return 'الآن';
+    return new Date(ts).toLocaleString('ar-EG', {
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    });
+  }
 
-        if (!feed) return;
-        feed.innerHTML = '';
+  function getNewsId(news) {
+    return news?._id || news?.id || '';
+  }
 
-        if (!filtered.length) {
-          feed.innerHTML = `
-            <div class="cat-empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              <p>لا توجد أخبار في هذا التصنيف بعد.</p>
-              <a href="admin.html" class="admin-link-btn">أضف أول خبر الآن</a>
-            </div>`;
-          return;
-        }
+  function getImage(news) {
+    return news?.imageUrl || news?.image || news?.contentImage || '';
+  }
 
-        filtered.forEach(news => {
-          const card = document.createElement('article');
-          card.className = 'cat-news-card news-card-hover';
-          card.setAttribute('data-animate', '');
+  function renderCategoryNews() {
+    const allNews = MojazNewsStore.getAll();
+    const filtered = cat ? allNews.filter(n => n.category === cat) : allNews;
 
-          const imgHtml = news.image
-            ? `<div class="cat-card-img"><img src="${news.image}" alt="${escapeHtml(news.title)}" loading="lazy"></div>`
-            : `<div class="cat-card-img cat-card-img-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`;
+    if (catCount) catCount.textContent = `${filtered.length} خبر`;
+    if (!feed) return;
+    feed.innerHTML = '';
 
-          const videoHtml = news.video
-            ? `<a href="${news.video}" target="_blank" class="cat-card-video-link"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg> مشاهدة الفيديو</a>`
-            : '';
+    if (!filtered.length) {
+      feed.innerHTML = `
+        <div class="cat-empty">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <p>لا توجد أخبار في هذا التصنيف بعد.</p>
+          <a href="admin.html" class="admin-link-btn">أضف أول خبر الآن</a>
+        </div>`;
+      return;
+    }
 
-          card.innerHTML = `
-            ${imgHtml}
-            <div class="cat-card-body">
-              <span class="cat-card-badge">${escapeHtml(news.category)}</span>
-              <h3 class="cat-card-title">${escapeHtml(news.title)}</h3>
-              <p class="cat-card-content">${escapeHtml(news.content)}</p>
-              <div class="cat-card-footer">
-                <time class="comment-time">${formatNewsDate(news.createdAt)}</time>
-                ${videoHtml}
-              </div>
-            </div>`;
-          feed.appendChild(card);
-        });
+    filtered.forEach(news => {
+      const card = document.createElement('article');
+      card.className = 'cat-news-card news-card-hover';
+      card.setAttribute('data-animate', '');
+      card.style.cursor = 'pointer';
+      card.onclick = () => {
+        window.location.href = `article.html?id=${encodeURIComponent(getNewsId(news))}`;
+      };
 
-        // Trigger scroll reveal for new cards
-        if (typeof initScrollReveal === 'function') initScrollReveal();
-      }
+      const img = getImage(news);
+      const imgHtml = img
+        ? `<div class="cat-card-img"><img src="${escapeHtml(img)}" alt="${escapeHtml(news.title)}" loading="lazy"></div>`
+        : `<div class="cat-card-img cat-card-img-placeholder">
+             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/>
+               <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+             </svg>
+           </div>`;
 
-      function escapeHtml(str) {
-        const d = document.createElement('div');
-        d.textContent = str || '';
-        return d.innerHTML;
-      }
+      const videoHtml = (news.videoUrl || news.video)
+        ? `<a href="${escapeHtml(news.videoUrl || news.video)}" target="_blank" class="cat-card-video-link" onclick="event.stopPropagation()">
+             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+             مشاهدة الفيديو
+           </a>`
+        : '';
 
-      function formatNewsDate(ts) {
-        return new Date(ts).toLocaleString('ar-EG', {
-          day: 'numeric', month: 'long', year: 'numeric',
-          hour: 'numeric', minute: '2-digit'
-        });
-      }
+      card.innerHTML = `
+        ${imgHtml}
+        <div class="cat-card-body">
+          <span class="cat-card-badge">${escapeHtml(news.category)}</span>
+          <h3 class="cat-card-title">${escapeHtml(news.title)}</h3>
+          <p class="cat-card-content">${escapeHtml((news.content || '').slice(0, 200))}</p>
+          <div class="cat-card-footer">
+            <time class="comment-time">${formatNewsDate(news.createdAt)}</time>
+            ${videoHtml}
+          </div>
+        </div>`;
 
-      renderCategoryNews();
-      MojazNewsStore.ready().then(renderCategoryNews).catch(renderCategoryNews);
-      window.addEventListener(MojazNewsStore.UPDATE_EVENT, renderCategoryNews);
-    })();
+      feed.appendChild(card);
+    });
+
+    if (typeof initScrollReveal === 'function') initScrollReveal();
+  }
+
+  renderCategoryNews();
+  MojazNewsStore.ready().then(renderCategoryNews).catch(renderCategoryNews);
+  window.addEventListener(MojazNewsStore.UPDATE_EVENT, renderCategoryNews);
+})();
   </script>
 </body>
 </html>
