@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مُوجز 24 | المدونة</title>
+  <meta name="description" content="صفحة المدونة والتعليقات في موقع مُوجز 24">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('mojaz24-theme') || 'light';
+        var fontScale = parseFloat(localStorage.getItem('mojaz24-font') || '1');
+        var root = document.documentElement;
+        root.setAttribute('data-theme', theme);
+        root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+        if (!Number.isNaN(fontScale)) {
+          root.style.fontSize = (Math.max(0.85, Math.min(1.3, fontScale)) * 16) + 'px';
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      background-color: #0d1117;
+      color: #e6edf3;
+    }
+
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f5f6fa;
+      color: #1a1d2e;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="blog-page">
+  <div class="reading-progress" id="readingProgress"></div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="header-top">
+      <div class="container">
+        <div class="header-top-inner">
+          <div class="header-meta">
+            <span class="meta-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+              <span id="currentDate">الجمعة، 10 أبريل 2026</span>
+            </span>
+            <span class="meta-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="currentTime">1:59 مساءً</span>
+            </span>
+          </div>
+          <div class="header-controls">
+            <div class="font-size-controls">
+              <button class="ctrl-btn" id="fontDecrease" title="تصغير الخط">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13h6"/><path d="m2 16 4.5-9 4.5 9"/><path d="M18 7v9"/><path d="m14 12 4 4 4-4"/></svg>
+              </button>
+              <button class="ctrl-btn" id="fontIncrease" title="تكبير الخط">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 13h6"/><path d="m2 16 4.5-9 4.5 9"/><path d="M18 16V7"/><path d="m14 11 4-4 4 4"/></svg>
+              </button>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="تغيير المظهر" aria-label="تبديل الوضع الداكن">
+              <div class="toggle-icon sun-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+              </div>
+              <div class="toggle-icon moon-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-main">
+      <div class="container">
+        <div class="header-main-inner">
+          <a class="site-logo" href="index.html" aria-label="العودة إلى الرئيسية">
+            <h1 class="logo-text">
+              <span class="logo-primary">مُوجز</span><span class="logo-accent"> 24</span>
+            </h1>
+            <p class="logo-tagline">#إعلام_يترك_أثرًا</p>
+          </a>
+
+          <nav class="main-nav">
+            <div class="nav-group">
+              <a href="index.html" class="nav-item">
+                <span class="nav-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+                </span>
+                <span class="nav-label">الرئيسية</span>
+              </a>
+            </div>
+            <div class="nav-group">
+              <a href="blog.html" class="nav-item active">
+                <span class="nav-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="m10 20-6-6"/><path d="M20 10a8 8 0 1 0-8 8h8"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                </span>
+                <span class="nav-label">المدونة</span>
+              </a>
+            </div>
+          </nav>
+
+          <div class="header-actions">
+            <a href="blog.html" class="blog-btn active">المدونة</a>
+            <button class="search-btn" id="searchToggle" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-overlay" id="searchOverlay">
+      <div class="container">
+        <div class="search-inner">
+          <input type="search" placeholder="ابحث في التدوينات والتعليقات..." id="searchInput" class="search-input">
+          <button class="search-close" id="searchClose" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="site-main blog-main">
+    <div class="container">
+      <section class="blog-shell" data-animate>
+        <div class="section-header blog-header">
+          <div>
+            <span class="section-badge">المدونة</span>
+            <h2 class="section-title">مساحة التعليقات</h2>
+          </div>
+          <p class="section-subtitle">اكتب تعليقك وسيظهر فورًا داخل الصفحة</p>
+        </div>
+
+        <div class="blog-grid">
+          <article class="blog-card blog-intro-card">
+            <h3>شارك رأيك</h3>
+            <p>هذه الصفحة مخصّصة لتعليقات القراء. يمكنك كتابة تعليق قصير وسيظهر فورًا داخل الصفحة.</p>
+          </article>
+
+          <section class="blog-card comment-composer-card">
+            <form id="commentForm" class="comment-form">
+              <label class="comment-label" for="commentInput">أضف تعليقًا</label>
+              <textarea id="commentInput" class="comment-input" rows="5" placeholder="اكتب تعليقك هنا..." required></textarea>
+              <div class="comment-form-actions">
+                <button type="submit" class="newsletter-btn blog-submit-btn">نشر التعليق</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <section class="blog-card comments-feed-card">
+          <div class="comments-header">
+            <h3>التعليقات</h3>
+            <span class="comments-count" id="commentsCount">0 تعليق</span>
+          </div>
+          <div class="comments-feed" id="commentsFeed"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-bg-glow footer-glow-right"></div>
+    <div class="footer-bg-glow footer-glow-left"></div>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h2 class="footer-logo"><span class="logo-primary">مُوجز</span><span>24</span></h2>
+          <!-- <p class="footer-desc">نفس الهوية البصرية للموقع مع صفحة تدوين وتعليقات خفيفة وسريعة.</p> -->
+        </div>
+        <div class="footer-links">
+          <h3>روابط سريعة</h3>
+          <ul>
+            <li><a href="index.html">الرئيسية</a></li>
+            <li><a href="blog.html">المدونة</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <p>© 2026 مُوجز 24. جميع الحقوق محفوظة.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="script.js"></script>
+  <script src="api.js"></script>
+  <script src="news-store.js"></script>
+  <script>
+    /* ===== Blog Comments (API) ===== */
+    (function () {
+      const form          = document.getElementById('commentForm');
+      const textarea      = document.getElementById('commentInput');
+      const feed          = document.getElementById('commentsFeed');
+      const countEl       = document.getElementById('commentsCount');
+
+      function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+      }
+
+      function formatDate(ts) {
+        if (!ts) return 'الآن';
+        return new Date(ts).toLocaleString('ar-EG', {
+          day: 'numeric', month: 'long', year: 'numeric',
+          hour: 'numeric', minute: '2-digit'
+        });
+      }
+
+      function renderComments(comments) {
+        const list = Array.isArray(comments) ? comments : [];
+        if (countEl) countEl.textContent = `${list.length} تعليق`;
+
+        if (!list.length) {
+          feed.innerHTML = '<div class="comment-empty">لا توجد تعليقات بعد. كن أول من يعلّق!</div>';
+          return;
+        }
+
+        feed.innerHTML = list.map(c => `
+          <div class="comment-item" style="padding:14px 0;border-bottom:1px solid var(--border);">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <div style="
+                width:32px;height:32px;border-radius:50%;
+                background:linear-gradient(135deg,#c8a96e,#a8893e);
+                color:#fff;font-weight:800;font-size:.85rem;
+                display:flex;align-items:center;justify-content:center;flex-shrink:0;
+              ">ق</div>
+              <time style="font-size:.78rem;color:var(--text-muted,#6b7280);">${escHtml(formatDate(c.createdAt))}</time>
+            </div>
+            <p style="margin:0;line-height:1.75;font-size:.92rem;">${escHtml(c.text)}</p>
+          </div>
+        `).join('');
+      }
+
+      async function loadComments() {
+        if (!window.MojazAPI) return;
+        try {
+          const comments = await window.MojazAPI.getComments();
+          renderComments(comments);
+        } catch {
+          feed.innerHTML = '<div class="comment-empty">تعذّر تحميل التعليقات.</div>';
+        }
+      }
+
+      form?.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const text = textarea.value.trim();
+        if (!text) return;
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
+        try {
+          await window.MojazAPI.addComment({ text });
+          textarea.value = '';
+          await loadComments();
+          // Toast
+          const toast = document.getElementById('toast');
+          if (toast) {
+            toast.textContent = '✅ تم نشر تعليقك';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+          }
+        } catch (err) {
+          const toast = document.getElementById('toast');
+          if (toast) {
+            toast.textContent = '⚠️ ' + (err.message || 'تعذّر نشر التعليق');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+          }
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+
+      loadComments();
+    })();
+  </script>
+</body>
+</html>

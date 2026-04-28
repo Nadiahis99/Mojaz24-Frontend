@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مُوجز 24 | إدارة الأخبار</title>
+  <meta name="description" content="إدارة أخبار موجز 24 محلياً عبر المتصفح فقط">
+  <script src="admin-guard.js"></script>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('mojaz24-theme') || 'light';
+        var fontScale = parseFloat(localStorage.getItem('mojaz24-font') || '1');
+        var root = document.documentElement;
+        root.setAttribute('data-theme', theme);
+        root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+        if (!Number.isNaN(fontScale)) {
+          root.style.fontSize = (Math.max(0.85, Math.min(1.3, fontScale)) * 16) + 'px';
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    html[data-theme="dark"],
+    html[data-theme="dark"] body {
+      background-color: #0d1117;
+      color: #e6edf3;
+    }
+
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f5f6fa;
+      color: #1a1d2e;
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Readex+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="blog-page">
+  <div class="reading-progress" id="readingProgress"></div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="header-top">
+      <div class="container">
+        <div class="header-top-inner">
+          <div class="header-meta">
+            <span class="meta-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+              <span id="currentDate"></span>
+            </span>
+            <span class="meta-item">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="currentTime"></span>
+            </span>
+          </div>
+          <div class="header-controls">
+            <div class="font-size-controls">
+              <button class="ctrl-btn" id="fontDecrease" title="تصغير الخط">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 13h6"/><path d="m2 16 4.5-9 4.5 9"/><path d="M18 7v9"/><path d="m14 12 4 4 4-4"/></svg>
+              </button>
+              <button class="ctrl-btn" id="fontIncrease" title="تكبير الخط">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 13h6"/><path d="m2 16 4.5-9 4.5 9"/><path d="M18 16V7"/><path d="m14 11 4-4 4 4"/></svg>
+              </button>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="تغيير المظهر" aria-label="تبديل الوضع الداكن">
+              <div class="toggle-icon sun-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+              </div>
+              <div class="toggle-icon moon-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-main">
+      <div class="container">
+        <div class="header-main-inner">
+          <a class="site-logo" href="index.html" aria-label="العودة إلى الرئيسية">
+            <h1 class="logo-text">
+              <span class="logo-primary">مُوجز</span><span class="logo-accent"> 24</span>
+            </h1>
+            <p class="logo-tagline">#إعلام_يترك_أثراً</p>
+          </a>
+
+          <nav class="main-nav">
+            <div class="nav-group">
+              <a href="index.html" class="nav-item">
+                <span class="nav-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>
+                </span>
+                <span class="nav-label">الرئيسية</span>
+              </a>
+            </div>
+            <div class="nav-group">
+              <a href="blog.html" class="nav-item">
+                <span class="nav-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6"/><path d="m10 20-6-6"/><path d="M20 10a8 8 0 1 0-8 8h8"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                </span>
+                <span class="nav-label">المدونة</span>
+              </a>
+            </div>
+            <div class="nav-group">
+              <a href="admin.html" class="nav-item active">
+                <span class="nav-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </span>
+                <span class="nav-label">الإدارة</span>
+              </a>
+            </div>
+          </nav>
+
+          <div class="header-actions">
+            <a href="blog.html" class="blog-btn">المدونة</a>
+            <a href="admin.html" class="blog-btn active">الإدارة</a>
+            <button class="search-btn" id="searchToggle" type="button">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-overlay" id="searchOverlay">
+      <div class="container">
+        <div class="search-inner">
+          <input type="search" placeholder="ابحث في الأخبار..." id="searchInput" class="search-input">
+          <button class="search-close" id="searchClose" type="button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="site-main blog-main">
+    <div class="container">
+      <section class="blog-shell" data-animate>
+        <div class="section-header blog-header">
+          <div>
+            <span class="section-badge">الإدارة</span>
+            <h2 class="section-title">لوحة الأخبار</h2>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span class="comments-count" id="newsCount">0 خبر</span>
+            <a href="index.html" class="admin-link-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              معاينة الرئيسية
+            </a>
+          </div>
+        </div>
+
+        <div class="admin-stats">
+          <div class="admin-stat-card">
+            <span class="admin-stat-num" id="statTotal">0</span>
+            <span class="admin-stat-label">إجمالي الأخبار</span>
+          </div>
+          <div class="admin-stat-card" id="statCatCards"></div>
+        </div>
+
+        <section class="blog-card admin-form-card" id="adminFormCard">
+          <div class="admin-form-header">
+            <h3 id="formTitle">إضافة خبر جديد</h3>
+            <button class="admin-cancel-btn" id="cancelEditBtn" type="button" style="display:none;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              إلغاء التعديل
+            </button>
+          </div>
+
+          <form id="adminNewsForm" class="admin-form">
+            <input type="hidden" id="editNewsId">
+
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="newsTitle">عنوان الخبر</label>
+                <input id="newsTitle" class="admin-input" type="text" placeholder="اكتب عنوان الخبر" required>
+              </div>
+              <div class="admin-field">
+                <label for="newsCategory">التصنيف</label>
+          <select id="newsCategory" class="admin-input admin-select" required>
+  <option value="">اختر التصنيف</option>
+
+  <optgroup label="── غرفة الأخبار ──">
+    <option value="عاجل">عاجل</option>
+    <option value="عالمي">عالمي</option>
+    <option value="سياسة">سياسة</option>
+    <option value="اقتصاد">اقتصاد</option>
+    <option value="رياضة">رياضة</option>
+    <option value="فن">فن</option>
+    <option value="صحة">صحة</option>
+    <option value="ثقافة">ثقافة</option>
+    <option value="مقالات">مقالات</option>
+    <option value="تقارير">تقارير</option>
+    <option value="أسعار وأسواق">أسعار وأسواق</option>
+    <option value="دين وحياة">دين وحياة</option>
+    <option value="سياحة وطيران">سياحة وطيران</option>
+    <option value="كاريكاتير">كاريكاتير</option>
+  </optgroup>
+
+  <optgroup label="── أقسام خاصة ──">
+    <option value="عدسة العالم">عدسة العالم</option>
+    <option value="حياة كريمة">حياة كريمة</option>
+    <option value="قدوة مصرية">قدوة مصرية</option>
+    <option value="وثائقيات">وثائقيات</option>
+  </optgroup>
+
+  <optgroup label="── مدارس وجامعات ──">
+    <option value="كواليس التعليم">كواليس التعليم</option>
+    <option value="سينما التعليم">سينما التعليم</option>
+  </optgroup>
+
+  <optgroup label="── المستقبل الرقمي ──">
+    <option value="كود الخبر">كود الخبر</option>
+    <option value="عين التقنية">عين التقنية</option>
+  </optgroup>
+
+  <optgroup label="── صوت الشارع ──">
+    <option value="حوادث">حوادث</option>
+    <option value="عين الحقيقة">عين الحقيقة</option>
+  </optgroup>
+
+  <optgroup label="── تراثنا ──">
+    <option value="أصل الحكاية">أصل الحكاية</option>
+    <option value="حكاية وكادر">حكاية وكادر</option>
+  </optgroup>
+
+  <optgroup label="── أثير ──">
+    <option value="Radio On Air">Radio On Air</option>
+    <option value="بودكاست">بودكاست</option>
+  </optgroup>
+
+</select>
+              </div>
+            </div>
+
+            <div class="admin-field">
+              <label for="newsContent">محتوى الخبر</label>
+              <textarea id="newsContent" class="admin-input admin-textarea" rows="7" placeholder="اكتب المحتوى. يمكنك استخدام فواصل الأسطر بين الفقرات." required></textarea>
+            </div>
+
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="newsImage">صورة الغلاف</label>
+                <div class="admin-upload-wrap">
+                  <input id="newsImage" class="admin-file-input" type="file" accept="image/*">
+                  <label class="admin-upload-label" for="newsImage">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <span id="imageFileName">اختر صورة...</span>
+                  </label>
+                  <div class="admin-img-preview" id="imagePreview"></div>
+                </div>
+              </div>
+
+              <div class="admin-field">
+                <label>صور داخل المحتوى <span class="admin-field-hint">اختيارية — يمكن إضافة أكثر من صورة</span></label>
+                <div class="admin-upload-wrap">
+                  <input id="newsContentImages" class="admin-file-input" type="file" accept="image/*" multiple>
+                  <label class="admin-upload-label" for="newsContentImages">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <span id="contentImagesFileName">اختر صورة أو أكثر للمحتوى...</span>
+                  </label>
+                  <div class="admin-multi-img-preview" id="contentImagesPreview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-form-row">
+              <div class="admin-field">
+                <label for="newsVideo">رابط فيديو <span class="admin-field-hint">اختياري</span></label>
+                <input id="newsVideo" class="admin-input" type="url" placeholder="https://example.com/video">
+              </div>
+
+              <div class="admin-field">
+                <label for="newsVideoFile">رفع فيديو <span class="admin-field-hint">اختياري</span></label>
+                <div class="admin-upload-wrap">
+                  <input id="newsVideoFile" class="admin-file-input" type="file" accept="video/*">
+                  <label class="admin-upload-label" for="newsVideoFile">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <span id="videoFileName">اختر ملف فيديو...</span>
+                  </label>
+                  <div class="admin-video-preview" id="videoFilePreview"></div>
+                </div>
+              </div>
+            </div>
+<div class="admin-field">
+  <label for="newsAudioFile">رفع تسجيل صوتي <span class="admin-field-hint">اختياري</span></label>
+  <div class="admin-upload-wrap">
+    <input id="newsAudioFile" class="admin-file-input" type="file" accept="audio/*">
+    <label class="admin-upload-label" for="newsAudioFile">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+        <line x1="12" x2="12" y1="19" y2="22"/>
+      </svg>
+      <span id="audioFileName">اختر ملف صوتي...</span>
+    </label>
+    <div class="admin-audio-preview" id="audioFilePreview"></div>
+  </div>
+</div>
+            <div class="admin-field">
+              <label>تسجيل فيديو من المتصفح <span class="admin-field-hint">اختياري</span></label>
+              <div class="admin-record-wrap">
+                <div class="admin-record-controls">
+                  <button id="startRecordBtn" class="admin-record-btn" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+                    بدء التسجيل
+                  </button>
+                  <button id="stopRecordBtn" class="admin-record-btn admin-record-stop" type="button" style="display:none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    إيقاف التسجيل
+                  </button>
+                  <span id="recordTimer" class="admin-record-timer" style="display:none;">00:00</span>
+                  <button id="clearRecordBtn" class="admin-cancel-btn" type="button" style="display:none;">مسح التسجيل</button>
+                </div>
+                <video id="recordPreview" class="admin-record-preview" autoplay muted playsinline style="display:none;"></video>
+                <video id="recordedVideoPreview" class="admin-record-preview" controls playsinline style="display:none;"></video>
+              </div>
+            </div>
+
+            <div class="comment-form-actions">
+              <button id="submitBtn" type="submit" class="newsletter-btn blog-submit-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                نشر الخبر
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="blog-card comments-feed-card">
+          <div class="comments-header">
+            <h3>الأخبار المنشورة</h3>
+            <select id="filterCategory" class="admin-input admin-select" style="max-width:220px;">
+              <option value="">كل التصنيفات</option>
+            </select>
+          </div>
+          <div class="admin-news-feed" id="adminNewsFeed"></div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-bg-glow footer-glow-right"></div>
+    <div class="footer-bg-glow footer-glow-left"></div>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h2 class="footer-logo"><span class="logo-primary">مُوجز</span><span>24</span></h2>
+        </div>
+        <div class="footer-links">
+          <h3>روابط سريعة</h3>
+          <ul>
+            <li><a href="index.html">الرئيسية</a></li>
+            <li><a href="blog.html">المدونة</a></li>
+            <li><a href="category.html">التصنيفات</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="container">
+        <p>© 2026 مُوجز 24. جميع الحقوق محفوظة.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+ <script src="api.js"></script>        <!-- الأول دايماً -->
+<script src="Auth.js"></script>
+<script src="news-store.js"></script>
+<script src="admin.js"></script>
+<script src="Admin_session_bar.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
