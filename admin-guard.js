@@ -1,4 +1,3 @@
-
 (function () {
   try {
     var raw     = sessionStorage.getItem("mojaz24-session");
